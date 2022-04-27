@@ -109,9 +109,12 @@ proc routeRequest(router: Router, req: Request, res: Response): Option[string] =
         result = if result.isNone(): some(router.buildPage(router.fallback(req, res))) else: result
     except:
         try:
+            res.statusCode = Http500
             result = some(router.buildPage(router.error(req, res)))
+            # TODO logging
         except: 
             result = some(router.buildPage("<h1>Cascading Error</h1><div>Error rendering error page</div>"))
+            # TODO logging
     res.body = result.get("")
     try:
         for fn in router.middleware:

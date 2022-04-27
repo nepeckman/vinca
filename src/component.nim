@@ -131,15 +131,14 @@ proc buildComponent(comp: NimNode): NimNode =
     result.add(buildComponentRoute(name))
     result.add(buildComponentLinker(comp))
     addScopeToProc(comp)
-    echo repr result
 
 macro component(comp: untyped): untyped = buildComponent(comp)
-macro action(attributes: varargs[string], body: untyped) = newEmptyNode()
 
+import converters
+export converters
 
 when isMainModule:
     import karax/karaxdsl, karax/vdom
-    import strutils
 
     type Foo = ref object
         val: string
@@ -152,6 +151,8 @@ when isMainModule:
         let id = scope.newIdSelector("foo")
         result = buildHtml(tdiv):
             span(): text foo.val
+    
+    serve()
 
     when not compiles(vincaConsthelloComponentIndicator):
         static:
