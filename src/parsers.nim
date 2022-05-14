@@ -1,4 +1,4 @@
-import tables, typeinfo, strutils
+import tables, typeinfo, strutils, sequtils, uri, json
 import types
 
 proc parseBody*(body: string): Table[string, string] =
@@ -23,16 +23,13 @@ proc marshall*[T](body: Table[string, string]): T =
             raise newParseError("Error setting field '" & key & "' (type: " & $a[key].kind & ") with value '" & $val & "' (type: " & $val.toAny.kind & ") for object type '" & $typeof(obj) & "'")
     result = obj
 
-proc parseQueryParams*(path: string): Table[string, string] =
+proc parseQueryParams*(path: string): seq[(string, string)] =
     let pathParts = path.split("?")
     if pathParts.len < 2 or pathParts[1].len == 0:
         return
-    let queryParts = pathParts[1].split("&")
-    for param in queryParts:
-        let paramParts = param.split("=")
-        let key = paramParts[0]
-        let value = if paramParts.len == 1: "" else: paramParts[1]
-        result[key] = value
+    toSeq(decodeQuery(pathParts[1]))
+
+proc encodeParam*[T](obj: T): string = encodeUrl($ (% obj))
 
 proc buildQueryString*(params: varargs[string]): string =
     if params.len == 0:

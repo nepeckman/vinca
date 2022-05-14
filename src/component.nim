@@ -1,6 +1,8 @@
 import macros, httpcore, options, tables
 import server, types, parsers, selector
 
+import json, uri
+
 func getComponentRenderName(name: string): NimNode = ident("vincaProc" & name & "Render")
 
 func getComponentLinkerName(name: string): NimNode = ident("vincaProc" & name & "Linker")
@@ -21,29 +23,22 @@ type ComponentParam = ref object
   name: string
   typeName: string
 
+proc getParam(params: seq[(string, string)], name: string): string =
+    for param in params:
+        if param[0] == name:
+            return param[1]
+
 proc buildComponentCall(component: NimNode, parsedParamIdent: NimNode, params: seq[ComponentParam]): NimNode =
     result = newNimNode(nnkCall)
     result.add(component)
     for param in params:
         if param.kind == cpkQuery:
             let nameString = newStrLitNode(param.name)
-            if param.typeName == "string":
-                result.add(quote do: `parsedParamIdent`[`nameString`])
-            else:
-                let converterFn = ident("parse" & param.typeName)
-                let converterName = newStrLitNode(converterFn.strVal)
-                let typeName = newStrLitNode(param.typeName)
-                let typeIdent = ident(param.typeName)
-                result.add(quote do: 
-                    block:
-                        when not compiles(`converterFn`(`parsedParamIdent`[`nameString`])):
-                            static:
-                                raise newCompileError("Type " & `typeName` & " must implement a proc " & `converterName` & 
-                                    " that converts a string to " & `typeName` & " in order to be used as a Component parameter")
-                            `typeIdent`()
-                        else:
-                            `converterFn`(`parsedParamIdent`[`nameString`])
-                )
+            let converterFn = ident("parse" & param.typeName)
+            let typeIdent = ident(param.typeName)
+            result.add(quote do: 
+                parseJson(`parsedParamIdent`.getParam(`nameString`)).to(`typeIdent`)
+            )
         elif param.kind == cpkRequest:
             result.add(ident("req"))
         elif param.kind == cpkResponse:
@@ -95,14 +90,7 @@ proc buildComponentLinker(comp: NimNode): NimNode =
                 let paramName = newStrLitNode(paramIdent.strVal)
                 let paramStringIdent = ident(paramIdent.strVal & "Param")
                 body.add(quote do:
-                    let `paramStringIdent` = block:
-                        when not compiles($`paramIdent`):
-                            static:
-                                raise newCompileError("Type " & `paramTypeName` & 
-                                    " must implement a stringify proc '$' to be used as a Component parameter")
-                            ""
-                        else:
-                            `paramName` & "=" & $`paramIdent`
+                    let `paramStringIdent` = `paramName` & "=" & encodeParam(`paramIdent`)
                 )
                 callParams.add(paramStringIdent)
     let path = newStrLitNode("/" & component.strVal)
@@ -131,6 +119,7 @@ proc buildComponent(comp: NimNode): NimNode =
     #result.add(buildComponentRoute(name))
     result.add(buildComponentLinker(comp))
     addScopeToProc(comp)
+    echo repr result
 
 macro component(comp: untyped): untyped = buildComponent(comp)
 
