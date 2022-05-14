@@ -1,5 +1,5 @@
 import macros, httpcore, options, tables
-import routing, types, parsers, selector
+import server, types, parsers, selector
 
 func getComponentRenderName(name: string): NimNode = ident("vincaProc" & name & "Render")
 
@@ -128,7 +128,7 @@ proc buildComponent(comp: NimNode): NimNode =
     result.add(comp)
     result.add(buildComponentIndicator(name))
     result.add(buildComponentRender(comp))
-    result.add(buildComponentRoute(name))
+    #result.add(buildComponentRoute(name))
     result.add(buildComponentLinker(comp))
     addScopeToProc(comp)
 
