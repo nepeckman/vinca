@@ -1,20 +1,15 @@
-import macros, httpcore, options, tables
+import macros, strutils
 import server, types, parsers, selector
 
 import json, uri
 
-func getComponentRenderName(name: string): NimNode = ident("vincaProc" & name & "Render")
+func getRouteProc(): NimNode = ident("vincaProcRoute")
 
-func getComponentLinkerName(name: string): NimNode = ident("vincaProc" & name & "Linker")
+func getRouteObj(): NimNode = ident("vincaRoute")
 
-func getComponentRouteName(name: string): NimNode = ident("vincaVar" & name & "Route")
+func getLinkerProc(): NimNode = ident("vincaProcLinker")
 
-func getComponentIndicatorName(name: string): NimNode = ident("vincaConst" & name & "Indicator")
-
-func buildComponentIndicator(name: string): NimNode =
-    let indicator = getComponentIndicatorName(name)
-    result = quote do:
-        const `indicator` = true
+func getRenderProc(): NimNode = ident("vincaProcRender")
 
 type ComponentParamKind = enum cpkQuery, cpkPath, cpkRequest, cpkResponse
 
@@ -22,6 +17,17 @@ type ComponentParam = ref object
   kind: ComponentParamKind
   name: string
   typeName: string
+    
+proc getScopedName(body: NimNode): string =
+    let lineParts = lineInfo(body).split("/")
+    let filename = lineInfo(body).split("(")[0]
+    let location = lineInfo(body).split("(")[1].split(")")[0]
+    let row = location.split(",")[0].strip().parseInt
+    let col = location.split(",")[1].strip().parseInt
+    let declaration = staticRead(filename).splitLines()[row - 2].substr(col)
+    let compName = declaration.splitWhitespace()[0]
+    let modName = lineParts[lineParts.len - 1].split(".")[0]
+    result = modName & "-" & compName
 
 proc getParam(params: seq[(string, string)], name: string): string =
     for param in params:
@@ -34,7 +40,6 @@ proc buildComponentCall(component: NimNode, parsedParamIdent: NimNode, params: s
     for param in params:
         if param.kind == cpkQuery:
             let nameString = newStrLitNode(param.name)
-            let converterFn = ident("parse" & param.typeName)
             let typeIdent = ident(param.typeName)
             result.add(quote do: 
                 parseJson(`parsedParamIdent`.getParam(`nameString`)).to(`typeIdent`)
@@ -44,9 +49,9 @@ proc buildComponentCall(component: NimNode, parsedParamIdent: NimNode, params: s
         elif param.kind == cpkResponse:
             result.add(ident("res"))
 
-proc buildComponentRender(comp: NimNode): NimNode =
+proc buildComponentRouteFn(comp: NimNode): NimNode =
     let component = comp.findChild(it.kind == nnkIdent)
-    let render = getComponentRenderName(component.strVal)
+    let route = getRouteProc()
     let formalParams = comp.findChild(it.kind == nnkFormalParams)
     var params: seq[ComponentParam]
     for param in formalParams.children:
@@ -61,21 +66,19 @@ proc buildComponentRender(comp: NimNode): NimNode =
     let res = ident("res")
     let call = buildComponentCall(component, parsedQueryParams, params)
     result = quote do:
-        proc `render`(`req`: Request, `res`: Response): VNode =
+        proc `route`(`req`: Request, `res`: Response): VNode =
             let `parsedQueryParams` = parseQueryParams(`req`.path)
             `call`
 
 proc buildComponentRoute(name: string): NimNode =
-    let route = getComponentRouteName(name)
-    let render = getComponentRenderName(name)
+    let route = getRouteObj()
+    let routeFn = getRouteProc()
     let path = newStrLitNode("/" & name)
     result = quote do:
-        let `route` = newRoute(`path`, `render`)
-        router.components.add(`route`)
+        let `route` = newComponentRoute(`path`, `routeFn`)
+        router.addComponent(`route`)
 
-proc buildComponentLinker(comp: NimNode): NimNode =
-    let component = comp.findChild(it.kind == nnkIdent)
-    let linker = getComponentLinkerName(component.strVal)
+proc buildComponentLinker(name: string, comp: NimNode): NimNode =
     let formalParams = comp.findChild(it.kind == nnkFormalParams)
     var params: seq[NimNode]
     params.add(ident("string"))
@@ -86,20 +89,18 @@ proc buildComponentLinker(comp: NimNode): NimNode =
             params.add(param)
             if param[1].strVal notin ["Request", "Response"]:
                 let paramIdent = param[0]
-                let paramTypeName = newStrLitNode(param[1].strVal)
                 let paramName = newStrLitNode(paramIdent.strVal)
                 let paramStringIdent = ident(paramIdent.strVal & "Param")
                 body.add(quote do:
                     let `paramStringIdent` = `paramName` & "=" & encodeParam(`paramIdent`)
                 )
                 callParams.add(paramStringIdent)
-    let path = newStrLitNode("/" & component.strVal)
+    let path = newStrLitNode("/" & name)
     let call = newCall(ident("buildQueryString"), callParams)
     body.add(quote do: `path` & `call`) 
-    result = newProc(linker, params, body)
+    result = newProc(getLinkerProc(), params, body)
 
-proc addScopeToProc(comp: NimNode) =
-    let name = comp.findChild(it.kind == nnkIdent).strVal
+proc updateRenderProc(name: string, comp: NimNode) =
     var oldBody = comp[6]
     let scope = ident("scope")
     let scopeName = newStrLitNode(name)
@@ -108,43 +109,42 @@ proc addScopeToProc(comp: NimNode) =
     )
     copyChildrenTo(oldBody, body)
     comp[6] = body
-    
-proc buildComponent(comp: NimNode): NimNode =
-    let component = comp.findChild(it.kind == nnkIdent)
-    let name = component.strVal
-    result = newNimNode(nnkStmtList)
-    result.add(comp)
-    result.add(buildComponentIndicator(name))
-    result.add(buildComponentRender(comp))
-    #result.add(buildComponentRoute(name))
-    result.add(buildComponentLinker(comp))
-    addScopeToProc(comp)
+    comp[0] = getRenderProc()
+
+proc buildComponent(body: NimNode): NimNode =
+    let name = getScopedName(body)
+    var blockStatements = newStmtList()
+    let renderProc = body.findChild(it.kind == nnkProcDef and it[0].strVal == "render")
+    if renderProc == nil:
+        result = quote do:
+            static:
+                raise newCompileError("Component is missing render proc")
+        return
+    updateRenderProc(name, renderProc)
+    blockStatements.add(renderProc)
+    blockStatements.add(buildComponentRouteFn(renderProc))
+    blockStatements.add(buildComponentLinker(name, renderProc))
+    blockStatements.add(buildComponentRoute(name))
+    let renderSym = getRenderProc()
+    let linkerSym = getLinkerProc()
+    let routeSym = getRouteObj()
+    blockStatements.add(quote do:
+        (render: `renderSym`, linker: `linkerSym`, route: `routeSym`)
+    )
+    result = newBlockStmt(blockStatements)
     echo repr result
 
-macro component(comp: untyped): untyped = buildComponent(comp)
-
-import converters
-export converters
+macro component(body: untyped): untyped = buildComponent(body)
 
 when isMainModule:
     import karax/karaxdsl, karax/vdom
 
     type Foo = ref object
         val: string
-    
-    proc parseFoo(str: string): Foo = Foo(val: str)
 
-    proc `$`(foo: Foo): string = foo.val
+    let helloComponent = component():
+        proc render(): VNode =
+            buildHtml(tdiv):
+                span(): text "abc"
 
-    proc helloComponent(foo: Foo, bar: int, req: Request): VNode {.component.} =
-        let id = scope.newIdSelector("foo")
-        result = buildHtml(tdiv):
-            span(): text foo.val
-    
-    serve()
-
-    when not compiles(vincaConsthelloComponentIndicator):
-        static:
-            let error = CompileError()
-            error.msg = "Foo is not a component"
-            raise error
+    discard helloComponent 

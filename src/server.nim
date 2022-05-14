@@ -12,19 +12,19 @@ proc matchComponent(router: Router, req: Request, res: Response): Option[string]
     if not req.path.startsWith(router.componentPath): return
     for route in router.components:
         if req.path.startsWith(router.componentPath & route.path):
-            return some(route.render(req, res))
+            return some(route.doRoute(req, res))
 
 proc matchPage(router: Router, req: Request, res: Response): Option[string] =
     result = none[string]()
     for route in router.pages:
         if req.path.startsWith(route.path):
-            return some(router.buildPage(route.render(req, res)))
+            return some(router.buildPage(route.doRoute(req, res)))
 
 proc matchGeneric(router: Router, req: Request, res: Response): Option[string] =
     result = none[string]()
     for route in router.routes:
         if req.path.startsWith(route.path):
-            return some(route.render(req, res))
+            return some(route.doRoute(req, res))
 
 proc matchChildRouter(router: Router, req: Request, res: Response): Option[string] =
     result = none[string]()
@@ -44,11 +44,11 @@ proc routeRequest(router: Router, req: Request, res: Response): Option[string] =
         if result.isNone(): result = router.matchPage(req, res)
         if result.isNone(): result = router.matchGeneric(req, res)
         if result.isNone(): result = router.matchChildRouter(req, res)
-        if result.isNone(): result = some(router.buildPage(router.fallback.render(req, res)))
+        if result.isNone(): result = some(router.buildPage(router.fallback.doRoute(req, res)))
     except:
         try:
             res.statusCode = Http500
-            result = some(router.buildPage(router.error.render(req, res)))
+            result = some(router.buildPage(router.error.doRoute(req, res)))
             # TODO logging
         except: 
             result = some(router.buildPage("<h1>Cascading Error</h1><div>Error rendering error page</div>"))
