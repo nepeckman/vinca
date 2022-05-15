@@ -11,6 +11,7 @@ type Router* = ref object
   footer*: string
   middleware*: seq[Middleware]
   children*: seq[Router]
+  index*: Route
   error*: Route
   fallback*: Route
 

@@ -33,14 +33,15 @@ proc matchChildRouter(router: Router, req: Request, res: Response): Option[strin
             return child.routeRequest(req, res)
 
 proc routeRequest(router: Router, req: Request, res: Response): Option[string] =
-    try:
-        for fn in router.middleware:
-            if fn.kind in {mkIncoming, mkBidirectional}:
+    for fn in router.middleware:
+        if fn.kind in {mkIncoming, mkBidirectional}:
+            try:
                 fn.run(req, res)
-    except: discard
+            except: discard
     result = none[string]()
     try:
-        result = router.matchComponent(req, res)
+        if req.path == router.path and router.index != nil: result = some(router.buildPage(router.fallback.doRoute(req, res)))
+        if result.isNone(): result = router.matchComponent(req, res)
         if result.isNone(): result = router.matchPage(req, res)
         if result.isNone(): result = router.matchGeneric(req, res)
         if result.isNone(): result = router.matchChildRouter(req, res)
@@ -54,11 +55,11 @@ proc routeRequest(router: Router, req: Request, res: Response): Option[string] =
             result = some(router.buildPage("<h1>Cascading Error</h1><div>Error rendering error page</div>"))
             # TODO logging
     res.body = result.get("")
-    try:
-        for fn in router.middleware:
-            if fn.kind in {mkOutgoing, mkBidirectional}:
+    for fn in router.middleware:
+        if fn.kind in {mkOutgoing, mkBidirectional}:
+            try:
                 fn.run(req, res)
-    except: discard
+            except: discard
     
 
 
