@@ -3,7 +3,7 @@ import asyncdispatch
 
 import server/[types, route, middleware], server/router as routing
 
-proc routeRequest(router: Router, req: Request, res: Response): Option[string] {.gcsafe.}
+proc routeRequest*(router: Router, req: Request, res: Response): Option[string] {.gcsafe.}
 
 proc matchComponent(router: Router, req: Request, res: Response): Option[string] =
     result = none[string]()
@@ -30,7 +30,7 @@ proc matchChildRouter(router: Router, req: Request, res: Response): Option[strin
         if req.path.startsWith(child.path):
             return child.routeRequest(req, res)
 
-proc routeRequest(router: Router, req: Request, res: Response): Option[string] =
+proc routeRequest*(router: Router, req: Request, res: Response): Option[string] =
     for fn in router.middleware:
         if fn.kind in {mkIncoming, mkBidirectional}:
             try:
