@@ -1,9 +1,9 @@
 import macros
 
-func getRouteProc*(): NimNode = ident("vincaProcRoute")
+func getRouteProc*(): NimNode = ident("routeProc")
 
-func getRouteObj*(): NimNode = ident("vincaRoute")
+func getRouteObj*(): NimNode = ident("route")
 
-func getLinkerProc*(): NimNode = ident("vincaProcLinker")
+func getLinkerProc*(): NimNode = ident("linker")
 
-func getRenderProc*(): NimNode = ident("vincaProcRender")
+func getRenderProc*(): NimNode = ident("render")

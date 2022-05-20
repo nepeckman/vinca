@@ -1,4 +1,5 @@
 import karax/karaxdsl
+import component, server
 import types, selector, ajax, trigger
 
 proc hxEl*(nodeKind: VNodeKind, modifiers: varargs[HxModifier]): VNode =
@@ -8,4 +9,5 @@ proc hxEl*(nodeKind: VNodeKind, modifiers: varargs[HxModifier]): VNode =
 
 
 export types, selector, ajax, trigger
+export component, server
 export karaxdsl

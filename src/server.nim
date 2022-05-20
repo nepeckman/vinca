@@ -39,7 +39,7 @@ proc routeRequest*(router: Router, req: Request, res: Response): Option[string] 
     result = none[string]()
     try:
         if (req.path == router.path or req.path == router.path & "/") and router.index != nil:
-            result = some(router.buildPage(router.fallback.doRoute(req, res)))
+            result = some(router.buildPage(router.index.doRoute(req, res)))
         if result.isNone(): result = router.matchComponent(req, res)
         if result.isNone(): result = router.matchPage(req, res)
         if result.isNone(): result = router.matchGeneric(req, res)
@@ -60,7 +60,7 @@ proc routeRequest*(router: Router, req: Request, res: Response): Option[string] 
                 fn.run(req, res)
             except: discard
     
-
+# TODO port/settings
 
 proc serve*(router: Router) =
     proc onRequest(request: HttpBeastRequest): Future[void] {.gcsafe.} =

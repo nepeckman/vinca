@@ -26,7 +26,7 @@ proc buildRouteFn(renderProc: NimNode): NimNode =
     let res = ident("res")
     let call = buildRenderCall(parsedQueryParams, params)
     result = quote do:
-        proc `route`(`req`: Request, `res`: Response): VNode =
+        proc `route`(`req`: Request, `res`: Response): VNode {.gcsafe.} =
             let `parsedQueryParams` = parseQueryParams(`req`.path)
             `call`
 
@@ -65,6 +65,7 @@ proc buildLinkerFn(path: string, renderProc: NimNode, router: NimNode): NimNode 
     body.add(quote do: `router`.componentPath & `pathNode` & `queryString`) 
     var procParams = concat(@[ident("string")], paramIdents)
     result = newProc(getLinkerProc(), procParams, body)
+    result.addPragma(ident("gcsafe"))
 
 proc buildComponentTuple(): NimNode =
     let renderSym = getRenderProc()
@@ -83,6 +84,7 @@ proc buildRenderProc(path: string, renderProc: NimNode): NimNode =
         var `scope` = newScope(`scopeName`)
     )
     copyChildrenTo(oldBody, body)
+    procDef.addPragma(ident("gcsafe"))
     procDef[6] = body
     procDef[0] = getRenderProc()
     result = procDef
@@ -92,15 +94,20 @@ proc buildComponent(router: NimNode, isPage: bool, body: NimNode): NimNode =
     let renderStmt = body.findChild(it.kind == nnkAsgn and it[0].strVal == "render")
     if renderStmt == nil:
         raise newCompileError("Component is missing render proc")
+    let suppressWarning = quote do:
+        {.push warning[GcUnsafe2]: off.}
+    let enableWarning = quote do:
+        {.push warning[GcUnsafe2]: on.}
     let renderProc = buildRenderProc(path, renderStmt[1])
     var blockStatements = newStmtList()
+    blockStatements.add(suppressWarning)
+    blockStatements.add(buildLinkerFn(path, renderProc, router))
     blockStatements.add(renderProc)
     blockStatements.add(buildRouteFn(renderProc))
-    blockStatements.add(buildLinkerFn(path, renderProc, router))
     blockStatements.add(buildRoute(path, isPage, router))
+    blockStatements.add(enableWarning)
     blockStatements.add(buildComponentTuple())
     result = newBlockStmt(blockStatements)
-    echo repr result
 
 macro component*(body: untyped): untyped = buildComponent(ident("router"), false, body)
 
@@ -111,15 +118,3 @@ macro page*(body: untyped): untyped = buildComponent(ident("router"), true, body
 macro page*(router: untyped, body: untyped): untyped = buildComponent(router, true, body)
 
 export runtime, json, router
-
-when isMainModule:
-    import karax/karaxdsl, karax/vdom
-
-    type Foo = ref object
-        val: string
-
-    let helloComponent = page():
-        path = "asdf"
-        render = proc (foo: Foo, req: Request): VNode =
-            buildHtml(tdiv):
-                span(): text foo.val
