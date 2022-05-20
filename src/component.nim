@@ -40,3 +40,12 @@ macro page*(body: untyped): untyped = generateComponent(ident("router"), true, b
 macro page*(router: untyped, body: untyped): untyped = generateComponent(router, true, body)
 
 export runtime, json, router
+
+## TODO Validate:
+## Render always exists
+## Only render, path, linker, route
+## All path params are strings
+## All path params at the end of the path
+## render returns VNode
+## linker returns string
+## route returns VNode
