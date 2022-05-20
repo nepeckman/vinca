@@ -41,7 +41,7 @@ proc routeRequest*(router: Router, req: Request, res: Response): Option[string] 
         if (req.path == router.path or req.path == router.path & "/") and router.index != nil:
             result = some(router.buildPage(router.index.doRoute(req, res)))
         if result.isNone(): result = router.matchComponent(req, res)
-        if result.isNone(): result = router.matchPage(req, res)
+        if result.isNone(): result = router.matchPage(req, res) # TODO: Add boost integration
         if result.isNone(): result = router.matchGeneric(req, res)
         if result.isNone(): result = router.matchChildRouter(req, res)
         if result.isNone(): result = some(router.buildPage(router.fallback.doRoute(req, res)))
