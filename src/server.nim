@@ -3,8 +3,6 @@ import asyncdispatch
 
 import server/[types, route, middleware], server/router as routing
 
-proc buildPage(router: Router, body: string): string = router.header & body & router.footer
-
 proc routeRequest(router: Router, req: Request, res: Response): Option[string] {.gcsafe.}
 
 proc matchComponent(router: Router, req: Request, res: Response): Option[string] =
@@ -40,7 +38,8 @@ proc routeRequest(router: Router, req: Request, res: Response): Option[string] =
             except: discard
     result = none[string]()
     try:
-        if req.path == router.path and router.index != nil: result = some(router.buildPage(router.fallback.doRoute(req, res)))
+        if (req.path == router.path or req.path == router.path & "/") and router.index != nil:
+            result = some(router.buildPage(router.fallback.doRoute(req, res)))
         if result.isNone(): result = router.matchComponent(req, res)
         if result.isNone(): result = router.matchPage(req, res)
         if result.isNone(): result = router.matchGeneric(req, res)

@@ -40,3 +40,5 @@ proc addRoute*(router: Router, route: Route) = router.routes.add(route)
 proc addMiddleware*(router: Router, middleware: Middleware) = router.middleware.add(middleware)
 
 proc addChildRouter*(router: Router, child: Router) = router.children.add(child)
+
+proc buildPage*(router: Router, body: string): string = router.header & body & router.footer
