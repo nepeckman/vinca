@@ -30,13 +30,14 @@ proc buildRouteFn(renderProc: NimNode): NimNode =
             let `parsedQueryParams` = parseQueryParams(`req`.path)
             `call`
 
-proc buildRoute(path: string, router: NimNode): NimNode =
+proc buildRoute(path: string, isPage: bool, router: NimNode): NimNode =
     let route = getRouteObj()
     let routeFn = getRouteProc()
     let pathNode = newStrLitNode("/" & path)
+    let addCall = if isPage: ident("addPage") else: ident("addComponent")
     result = quote do:
         let `route` = newComponentRoute(`pathNode`, `routeFn`)
-        `router`.addComponent(`route`)
+        `router`.`addCall`(`route`)
 
 proc getParamIdents(p: NimNode): seq[NimNode] =
     let formalParams = p.findChild(it.kind == nnkFormalParams)
@@ -72,38 +73,44 @@ proc buildComponentTuple(): NimNode =
     result = quote do:
         (render: `renderSym`, linker: `linkerSym`, route: `routeSym`)
 
-proc updateRenderProc(path: string, comp: NimNode) =
-    var oldBody = comp[6]
+proc buildRenderProc(path: string, renderProc: NimNode): NimNode =
+    var procDef = newNimNode(nnkProcDef)
+    copyChildrenTo(renderProc, procDef)
+    var oldBody = renderProc[6]
     let scope = ident("scope")
     let scopeName = newStrLitNode(path)
     var body = newStmtList(quote do:
         var `scope` = newScope(`scopeName`)
     )
     copyChildrenTo(oldBody, body)
-    comp[6] = body
-    comp[0] = getRenderProc()
+    procDef[6] = body
+    procDef[0] = getRenderProc()
+    result = procDef
 
-proc buildComponent(router: NimNode, body: NimNode): NimNode =
-    echo treerepr body
+proc buildComponent(router: NimNode, isPage: bool, body: NimNode): NimNode =
     let path = getPath(body)
-    var blockStatements = newStmtList()
-    let renderProc = body.findChild(it.kind == nnkProcDef and it[0].strVal == "render")
-    if renderProc == nil:
+    let renderStmt = body.findChild(it.kind == nnkAsgn and it[0].strVal == "render")
+    if renderStmt == nil:
         raise newCompileError("Component is missing render proc")
-    updateRenderProc(path, renderProc)
+    let renderProc = buildRenderProc(path, renderStmt[1])
+    var blockStatements = newStmtList()
     blockStatements.add(renderProc)
     blockStatements.add(buildRouteFn(renderProc))
     blockStatements.add(buildLinkerFn(path, renderProc, router))
-    blockStatements.add(buildRoute(path, router))
+    blockStatements.add(buildRoute(path, isPage, router))
     blockStatements.add(buildComponentTuple())
     result = newBlockStmt(blockStatements)
     echo repr result
 
-macro component*(body: untyped): untyped = buildComponent(ident("router"), body)
+macro component*(body: untyped): untyped = buildComponent(ident("router"), false, body)
 
-macro component*(router: untyped, body: untyped): untyped = buildComponent(router, body)
+macro component*(router: untyped, body: untyped): untyped = buildComponent(router, false, body)
 
-export runtime
+macro page*(body: untyped): untyped = buildComponent(ident("router"), true, body)
+
+macro page*(router: untyped, body: untyped): untyped = buildComponent(router, true, body)
+
+export runtime, json, router
 
 when isMainModule:
     import karax/karaxdsl, karax/vdom
@@ -111,9 +118,8 @@ when isMainModule:
     type Foo = ref object
         val: string
 
-    let helloComponent = component():
+    let helloComponent = page():
         path = "asdf"
-        proc render(foo: Foo, req: Request): VNode =
+        render = proc (foo: Foo, req: Request): VNode =
             buildHtml(tdiv):
                 span(): text foo.val
-        linker = proc (foo: Foo, req: Request): string = ""
