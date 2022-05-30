@@ -3,7 +3,7 @@ import src/vinca
 let counter = component():
   render = proc (val: int): VNode =
     result = buildHtml(tdiv):
-      hxEl(tdiv, hxPost(linker(val + 1)), hxTarget(thisSelector), hxSwap("outerHTML")):
+      hxEl(tdiv, post(linker(val + 1), trigger = trigger(HtmlEvent.mouseenter))):
         span(): text $val
         button(): text "Increment"
 

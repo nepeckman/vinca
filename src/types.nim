@@ -1,6 +1,6 @@
 import karax/vdom
 
-type HxModifier* = proc (node: VNode) {.gcSafe.}
+type NodeModifier* = proc (node: VNode) {.gcSafe.}
 
 type CompileError* = ref object of Defect
 proc newCompileError*(message: string): CompileError = CompileError(msg: message)

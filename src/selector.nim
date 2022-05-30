@@ -1,17 +1,20 @@
-import types 
-
 type SelectorKind* = enum skClass, skId, skThis
 type Selector* = object
-  kind: SelectorKind
+  kind*: SelectorKind
   name*: string
-  scopedName: string
 
-proc `$`*(selector: Selector): string = selector.scopedName
+proc `$`*(selector: Selector): string = selector.name
 
 proc select*(selector: Selector): string =
   case selector.kind
-  of skId: "#" & selector.scopedName
-  of skClass: "." & selector.scopedName
+  of skId: "#" & selector.name
+  of skClass: "." & selector.name
+  of skThis: "this"
+
+proc querySelect*(selector: Selector): string =
+  case selector.kind
+  of skId: "[id='" & selector.name & "']"
+  of skClass: "[class='" & selector.name & "']"
   of skThis: "this"
 
 type Scope* = object
@@ -22,15 +25,9 @@ proc newScope*(name: string): Scope = Scope(name: name)
 proc `&`*(scope: Scope, str: string): Scope = Scope(name: scope.name & str)
 
 proc newIdSelector*(scope: Scope, id: string): Selector =
-  Selector(kind: skId, name: id, scopedName: scope.name & "-" & id)
+  Selector(kind: skId, name: scope.name & "-" & id)
 
 proc newClassSelector*(scope: Scope, class: string): Selector =
-  Selector(kind: skClass, name: class, scopedName: scope.name & "-" & class)
+  Selector(kind: skClass, name: scope.name & "-" & class)
 
-let thisSelector* = Selector(kind: skThis, name: "this", scopedName: "this")
-
-proc hxTarget*(target: Selector): HxModifier =
-  return proc (node: VNode) = node.setAttr("hx-target", target.select)
-
-proc hxSwap*(swap: string): HxModifier =
-  return proc (node: VNode) = node.setAttr("hx-swap", swap)
+let thisSelector* = Selector(kind: skThis, name: "this")
