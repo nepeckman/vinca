@@ -7,6 +7,12 @@ proc newElement*(kind: VNodeKind, children: seq[VNode], modifiers: varargs[NodeM
     for modifier in modifiers:
         modifier(result)
 
+proc domify*[T](val: T): VNode =
+    when val is VNode:
+        return val
+    when val is string:
+        return text(val)
+
 proc parseVNodeKind(kind: string): VNodeKind =
     if kind == "vdiv": VNodeKind.vdiv
     else: parseEnum[VNodeKind](kind)
@@ -28,12 +34,9 @@ proc buildHtml(body: NimNode): NimNode =
     var stmtList = body.findChild(it.kind == nnkStmtList)
     for statement in stmtList.children:
         if statement.kind == nnkCall and statement[0].isElementKind():
-            echo statement[0].strVal
             elementChildren[1].add(statement.buildHtml())
-        elif statement.kind == nnkStrLit:
-            elementChildren[1].add(newCall(ident("text"), statement))
         else:
-            elementChildren[1].add(statement)
+            elementChildren[1].add(newCall(ident("domify"), statement))
     result.add(elementChildren)
     for idx in 1..(body.len - 1):
         let child = body[idx]
@@ -48,18 +51,10 @@ proc dslRoot(rootKind: NimNode, body: NimNode): NimNode =
     elementChildren.add(bindSym("@"))
     elementChildren.add(newNimNode(nnkBracket))
     for statement in body:
-        echo statement.kind
-        let typeStr = 
-            try: statement.getTypeInst().strVal()
-            except: ""
-        echo typeStr
         if statement.kind == nnkCall and statement[0].isElementKind():
-            echo statement[0].strVal
             elementChildren[1].add(statement.buildHtml())
-        elif statement.getTypeInst().strVal() == "string":
-            elementChildren[1].add(newCall(ident("text"), statement))
         else:
-            elementChildren[1].add(statement)
+            elementChildren[1].add(newCall(ident("domify"), statement))
     result.add(elementChildren)
 
 macro htmlDsl*(rootKind: untyped, body: untyped): untyped =
