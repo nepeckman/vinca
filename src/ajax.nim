@@ -1,5 +1,5 @@
 import httpcore
-import types, selector
+import html/vdom, selector
 import ajax/[parameters, trigger]
 
 type SwapType* = enum innerHTML, outerHTML, afterbegin, beforebegin, afterend, beforeend, noSwap
