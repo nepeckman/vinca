@@ -71,7 +71,8 @@ proc serve*(router: Router) =
 
     run(onRequest)
 
-let router* = newRouter()
+var router* {.threadvar.}: Router
+router = newRouter()
 
 proc serve*() = serve(router)
 

@@ -33,6 +33,14 @@ proc generateComponent(router: NimNode, isPage: bool, body: NimNode): NimNode =
     blockStatements.add(generateComponentTuple())
     result = newBlockStmt(blockStatements)
 
+## TODO multithread refactor
+## change macros to take name/body
+## change implicit path to be name
+## move router param to component body
+## add method to generate tuple type
+## declare a threadvar tuple type variable with name param
+## initalize the variable with blockStatement
+
 macro component*(body: untyped): untyped = generateComponent(ident("router"), false, body)
 
 macro component*(router: untyped, body: untyped): untyped = generateComponent(router, false, body)
