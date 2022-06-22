@@ -11,6 +11,7 @@ proc generateRenderProc*(path: Path, renderProc: NimNode): NimNode =
         var `scope` = newScope(`scopeName`)
     )
     copyChildrenTo(oldBody, body)
+    procDef.addPragma(ident("closure"))
     procDef.addPragma(ident("gcsafe"))
     procDef[6] = body
     procDef[0] = getRenderProc()

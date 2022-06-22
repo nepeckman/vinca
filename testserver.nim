@@ -1,25 +1,25 @@
 import src/vinca
 
-let counter = component():
+component counter:
   render = proc (val: int): VNode =
     result = htmlDsl():
       vdiv(post(linker(val + 1), trigger = trigger(HtmlEvent.mouseenter))):
         span(): $val
         button(): "Increment"
 
-let post = page():
+page post:
   path = "post/@content"
   render = proc (content: string): VNode =
     result = htmlDsl():
       span(): content
 
-let about = page():
+page about:
   path = "about"
   render = proc (): VNode =
     result = htmlDsl():
       span(): "This is a site powered by vinca"
 
-let index = page():
+page index:
   render = proc (): VNode =
     result = htmlDsl():
       vdiv():
@@ -28,4 +28,5 @@ let index = page():
       counter.render(0)
 
 router.index = index.route
+
 serve()

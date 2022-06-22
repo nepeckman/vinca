@@ -1,8 +1,31 @@
-import macros
+import macros, strutils
 import server, types
 import component/[idents, path, runtime]
 import component/[routegen, linkergen, rendergen]
 import json
+
+proc getRouter(body: NimNode): NimNode =
+    let explicitRouter = body.findChild(it.kind == nnkAsgn and it[0].strVal == "router") 
+    if explicitRouter.kind != nnkNilLit: explicitRouter
+    else: ident("router")
+
+proc getTypeName(name: NimNode): NimNode = ident(capitalizeAscii(name.strVal & "Component"))
+
+proc getComponentType(name, renderProc: NimNode): NimNode =
+    let params = renderProc.findChild(it.kind == nnkFormalParams)
+    let pragma = newNimNode(nnkPragma)
+    pragma.add(ident("closure"))
+    pragma.add(ident("gcsafe"))
+    let renderTy = newNimNode(nnkProcTy)
+    renderTy.add(params)
+    renderTy.add(pragma)
+    let linkerTy = newNimNode(nnkProcTy)
+    linkerTy.add(copyNimTree(params))
+    linkerTy.add(pragma)
+    linkerTy[0][0] = bindSym("string")
+    let typeName = getTypeName(name)
+    result = quote do:
+        type `typeName`* = tuple[render: `renderTy`, linker: `linkerTy`, route: Route]
 
 proc generateComponentTuple(): NimNode =
     let renderSym = getRenderProc()
@@ -11,8 +34,10 @@ proc generateComponentTuple(): NimNode =
     result = quote do:
         (render: `renderSym`, linker: `linkerSym`, route: `routeSym`)
 
-proc generateComponent(router: NimNode, isPage: bool, body: NimNode): NimNode =
-    let path = getPath(body)
+proc generateComponent(name: NimNode, isPage: bool, body: NimNode): NimNode =
+    result = newStmtList()
+    let path = getPath(name, body)
+    let router = getRouter(body)
     let renderStmt = body.findChild(it.kind == nnkAsgn and it[0].strVal == "render")
     if renderStmt == nil:
         raise newCompileError("Component is missing render proc")
@@ -23,6 +48,11 @@ proc generateComponent(router: NimNode, isPage: bool, body: NimNode): NimNode =
         {.push warning[GcUnsafe2]: on.}
         {.push hint[XDeclaredButNotUsed]: on.}
     let renderProc = generateRenderProc(path, renderStmt[1])
+    let componentType = getComponentType(name, renderProc)
+    let typeName = getTypeName(name)
+    result.add(componentType)
+    result.add(quote do:
+        var `name`* {.threadvar.}: `typeName`)
     var blockStatements = newStmtList()
     blockStatements.add(suppressWarning)
     blockStatements.add(generateLinkerProc(path, renderProc, isPage, router))
@@ -31,23 +61,13 @@ proc generateComponent(router: NimNode, isPage: bool, body: NimNode): NimNode =
     blockStatements.add(generateRouteObj(path, isPage, router))
     blockStatements.add(enableWarning)
     blockStatements.add(generateComponentTuple())
-    result = newBlockStmt(blockStatements)
+    let blockBody = newBlockStmt(blockStatements)
+    result.add(quote do:
+        `name` = `blockBody`)
 
-## TODO multithread refactor
-## change macros to take name/body
-## change implicit path to be name
-## move router param to component body
-## add method to generate tuple type
-## declare a threadvar tuple type variable with name param
-## initalize the variable with blockStatement
+macro component*(name: untyped, body: untyped): untyped = generateComponent(name, false, body)
 
-macro component*(body: untyped): untyped = generateComponent(ident("router"), false, body)
-
-macro component*(router: untyped, body: untyped): untyped = generateComponent(router, false, body)
-
-macro page*(body: untyped): untyped = generateComponent(ident("router"), true, body)
-
-macro page*(router: untyped, body: untyped): untyped = generateComponent(router, true, body)
+macro page*(name: untyped, body: untyped): untyped = generateComponent(name, true, body)
 
 export runtime, json, router
 

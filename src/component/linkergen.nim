@@ -31,4 +31,5 @@ proc generateLinkerProc*(path: Path, renderProc: NimNode, isPage: bool, router: 
     body.add(quote do: `base` & `pathNode` & `pathParamString` & `queryString`) 
     var procParams = concat(@[ident("string")], paramIdents)
     result = newProc(getLinkerProc(), procParams, body)
+    result.addPragma(ident("closure"))
     result.addPragma(ident("gcsafe"))
