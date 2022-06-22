@@ -1,6 +1,7 @@
 import macros
 from strutils import toUpperAscii, toLowerAscii, tokenize
 
+{.push hint[ConvFromXtoItselfNotNeeded]: off.}
 type
     Event* = ref object
 
@@ -340,3 +341,4 @@ proc `$`*(n: VNode): string =
     add(result, n)
 
 type NodeModifier* = proc (node: VNode) {.gcSafe.}
+{.pop.}

@@ -1,6 +1,7 @@
 import macros, strutils
 import ../selector, vdom
 
+{.push hint[ConvFromXtoItselfNotNeeded]: off.}
 macro attributeModifier(field: untyped, defaultVal: untyped): untyped =
     let fieldStr = newStrLitNode(field.strVal)
     let val = ident("val")
@@ -89,3 +90,4 @@ attributeModifier(step, 0)
 attributeModifier(wrap, true)
 
 # TODO: ARIA roles
+{.pop.}

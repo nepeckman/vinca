@@ -18,8 +18,10 @@ proc generateComponent(router: NimNode, isPage: bool, body: NimNode): NimNode =
         raise newCompileError("Component is missing render proc")
     let suppressWarning = quote do:
         {.push warning[GcUnsafe2]: off.}
+        {.push hint[XDeclaredButNotUsed]: off.}
     let enableWarning = quote do:
         {.push warning[GcUnsafe2]: on.}
+        {.push hint[XDeclaredButNotUsed]: on.}
     let renderProc = generateRenderProc(path, renderStmt[1])
     var blockStatements = newStmtList()
     blockStatements.add(suppressWarning)

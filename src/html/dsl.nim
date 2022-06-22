@@ -9,15 +9,17 @@ proc newElement*(kind: VNodeKind, children: seq[VNode], modifiers: varargs[NodeM
 
 proc domify*[T](val: T): VNode =
     when val is VNode:
-        return val
+        result = val
     when val is string:
-        return text(val)
+        result = text(val)
 
 proc parseVNodeKind(kind: string): VNodeKind =
     if kind == "vdiv": VNodeKind.vdiv
     else: parseEnum[VNodeKind](kind)
 
 proc isElementKind(ident: NimNode): bool =
+    if ident.kind in {nnkDotExpr}:
+        return false
     try:
         discard parseVNodeKind(ident.strVal)
         result = true
@@ -59,22 +61,6 @@ proc dslRoot(rootKind: NimNode, body: NimNode): NimNode =
 
 macro htmlDsl*(rootKind: untyped, body: untyped): untyped =
     result = dslRoot(rootKind, body)
-    echo repr result
 
 macro htmlDsl*(body: untyped): untyped = 
     result = dslRoot(newDotExpr(bindSym("VNodeKind"), bindSym("vdiv")), body)
-    echo repr result
-
-when isMainModule:
-    import strutils, attributes, ../ajax
-
-    let html = htmlDsl():
-        vdiv():
-            p(id("para"), get("something")): "asdfg"
-            "poiut"
-            "another"
-            button(id "asdk", class "mx-2 my-4", disabled()):
-                span(): "button"
-    
-    echo $html
-    echo parseEnum[VNodeKind]("div")

@@ -1,5 +1,5 @@
 import types, route, middleware
-import karax/karaxdsl, karax/vdom
+import ../html
 
 type Router* = ref object
   path*: string
@@ -16,14 +16,14 @@ type Router* = ref object
   fallback*: Route
 
 proc defaultFallbackPage(req: Request, res: Response): VNode =
-    buildHtml(tdiv):
-        h2(): text "404 Not Found"
+    htmlDsl():
+        h2(): "404 Not Found"
 
 let defaultFallbackRoute = newComponentRoute("", defaultFallbackPage)
 
 proc defaultErrorPage(req: Request, res: Response): VNode =
-    buildHtml(tdiv):
-        h2(): text "Server Error: " & $res.statusCode
+    htmlDsl():
+        h2(): "Server Error: " & $res.statusCode
 
 let defaultErrorRoute = newComponentRoute("", defaultErrorPage)
 

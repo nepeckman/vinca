@@ -12,4 +12,3 @@ bin           = @["vinca"]
 
 requires "nim >= 1.6.4"
 requires "httpbeast >= 0.4.0"
-requires "karax >= 1.2.1"

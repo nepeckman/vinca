@@ -1,5 +1,5 @@
 import os
-import types, karax/vdom
+import types, ../html/vdom
 
 type GenericRouteFn* = proc (req: Request, res: Response): string {.gcsafe.}
 
