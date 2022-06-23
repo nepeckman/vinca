@@ -30,5 +30,4 @@ proc newIdSelector*(scope: Scope, id: string): Selector =
 proc newClassSelector*(scope: Scope, class: string): Selector =
   Selector(kind: skClass, name: scope.name & "-" & class)
 
-var thisSelector* {.threadvar.}: Selector
-thisSelector = Selector(kind: skThis, name: "this")
+proc thisSelector*(): Selector = Selector(kind: skThis, name: "this")

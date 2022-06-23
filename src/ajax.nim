@@ -25,24 +25,24 @@ proc ajax(path: string, httpMethod: HttpMethod, target: Selector, trigger: Trigg
     if includeEl.kind != skThis:
       node.setAttr("hx-include", includeEl.querySelect)
 
-proc get*(path: string, target = thisSelector, trigger = defaultTrigger, swapType = outerHTML, 
-  params: AjaxParam = nil, includeEl = thisSelector): NodeModifier =
+proc get*(path: string, target = thisSelector(), trigger = defaultTrigger, swapType = outerHTML, 
+  params: AjaxParam = nil, includeEl = thisSelector()): NodeModifier =
   result = ajax(path, HttpGet, target, trigger, swapType, params, includeEl)
 
-proc post*(path: string, target = thisSelector, trigger = defaultTrigger, swapType = outerHTML, 
-  params: AjaxParam = nil, includeEl = thisSelector): NodeModifier =
+proc post*(path: string, target = thisSelector(), trigger = defaultTrigger, swapType = outerHTML, 
+  params: AjaxParam = nil, includeEl = thisSelector()): NodeModifier =
   result = ajax(path, HttpPost, target, trigger, swapType, params, includeEl)
 
-proc put*(path: string, target = thisSelector, trigger = defaultTrigger, swapType = outerHTML, 
-  params: AjaxParam = nil, includeEl = thisSelector): NodeModifier =
+proc put*(path: string, target = thisSelector(), trigger = defaultTrigger, swapType = outerHTML, 
+  params: AjaxParam = nil, includeEl = thisSelector()): NodeModifier =
   result = ajax(path, HttpPut, target, trigger, swapType, params, includeEl)
 
-proc patch*(path: string, target = thisSelector, trigger = defaultTrigger, swapType = outerHTML, 
-  params: AjaxParam = nil, includeEl = thisSelector): NodeModifier =
+proc patch*(path: string, target = thisSelector(), trigger = defaultTrigger, swapType = outerHTML, 
+  params: AjaxParam = nil, includeEl = thisSelector()): NodeModifier =
   result = ajax(path, HttpPatch, target, trigger, swapType, params, includeEl)
 
-proc delete*(path: string, target = thisSelector, trigger = defaultTrigger, swapType = outerHTML, 
-  params: AjaxParam = nil, includeEl = thisSelector): NodeModifier =
+proc delete*(path: string, target = thisSelector(), trigger = defaultTrigger, swapType = outerHTML, 
+  params: AjaxParam = nil, includeEl = thisSelector()): NodeModifier =
   result = ajax(path, HttpDelete, target, trigger, swapType, params, includeEl)
 
 export parameters, trigger

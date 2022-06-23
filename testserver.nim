@@ -31,8 +31,8 @@ var myRouter {.threadvar.}: Router
 proc getRouter(): Router {.gcsafe.} =
   if myRouter.isNil:
     myRouter = newRouter()
-    myRouter.index = index.route
     autoRoute(myRouter)
+    myRouter.index = index.route
   result = myRouter
 
 serve(getRouter)
