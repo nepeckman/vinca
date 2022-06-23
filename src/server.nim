@@ -1,7 +1,7 @@
 import options, strutils
 import asyncdispatch
 
-import server/[types, route, middleware], server/router as routing
+import server/[types, route, middleware, router]
 
 proc routeRequest*(router: Router, req: Request, res: Response): Option[string] {.gcsafe.}
 
@@ -62,8 +62,9 @@ proc routeRequest*(router: Router, req: Request, res: Response): Option[string] 
     
 # TODO port/settings
 
-proc serve*(router: Router) =
+proc serve*(routerFactory: proc (): Router {.gcsafe.}) =
     proc onRequest(request: HttpBeastRequest): Future[void] {.gcsafe.} =
+        let router = routerFactory()
         let req = buildRequest(request)
         var res = Response(statusCode: Http200, headers: newHttpHeaders(), body: "")
         discard router.routeRequest(req, res)
@@ -71,9 +72,4 @@ proc serve*(router: Router) =
 
     run(onRequest)
 
-var router* {.threadvar.}: Router
-router = newRouter()
-
-proc serve*() = serve(router)
-
-export types, route, middleware, routing
+export types, route, middleware, router

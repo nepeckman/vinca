@@ -19,17 +19,13 @@ proc defaultFallbackPage(req: Request, res: Response): VNode =
     htmlDsl():
         h2(): "404 Not Found"
 
-let defaultFallbackRoute = newComponentRoute("", defaultFallbackPage)
-
 proc defaultErrorPage(req: Request, res: Response): VNode =
     htmlDsl():
         h2(): "Server Error: " & $res.statusCode
 
-let defaultErrorRoute = newComponentRoute("", defaultErrorPage)
-
 proc newRouter*(): Router = Router(path: "", componentPath: "/components", components: @[], pages: @[],
     header: "<!DOCTYPE html>\n<html>\n", footer: "\n<script src=\"https://unpkg.com/htmx.org@1.7.0\"></script>\n</html>",
-    children: @[], error: defaultErrorRoute, fallback: defaultFallbackRoute)
+    children: @[], error: newComponentRoute("", defaultErrorPage), fallback: newComponentRoute("", defaultFallbackPage))
 
 proc addComponent*(router: Router, route: Route) = router.components.add(route)
 

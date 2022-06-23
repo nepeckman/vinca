@@ -1,13 +1,8 @@
 import macros, strutils
 import server, types
-import component/[idents, path, runtime]
+import component/[idents, path, runtime, autorouting]
 import component/[routegen, linkergen, rendergen]
 import json
-
-proc getRouter(body: NimNode): NimNode =
-    let explicitRouter = body.findChild(it.kind == nnkAsgn and it[0].strVal == "router") 
-    if explicitRouter.kind != nnkNilLit: explicitRouter
-    else: ident("router")
 
 proc getTypeName(name: NimNode): NimNode = ident(capitalizeAscii(name.strVal & "Component"))
 
@@ -38,9 +33,9 @@ proc generateComponentObj(typeName: NimNode): NimNode =
         `typeName`(render: `renderSym`, linker: `linkerSym`, route: `routeSym`)
 
 proc generateComponent(name: NimNode, isPage: bool, body: NimNode): NimNode =
+    if isPage: pageRoutes.add(name) else: componentRoutes.add(name)
     result = newStmtList()
     let path = getPath(name, body)
-    let router = getRouter(body)
     let renderStmt = body.findChild(it.kind == nnkAsgn and it[0].strVal == "render")
     if renderStmt == nil:
         raise newCompileError("Component is missing render proc")
@@ -58,10 +53,10 @@ proc generateComponent(name: NimNode, isPage: bool, body: NimNode): NimNode =
         var `name`* {.threadvar.}: `typeName`)
     var blockStatements = newStmtList()
     blockStatements.add(suppressWarning)
-    blockStatements.add(generateLinkerProc(path, renderProc, isPage, router))
+    blockStatements.add(generateLinkerProc(path, if isPage: "" else: "/components", renderProc)) # TODO make configurable
     blockStatements.add(renderProc)
     blockStatements.add(generateRouteProc(path, renderProc))
-    blockStatements.add(generateRouteObj(path, isPage, router))
+    blockStatements.add(generateRouteObj(path))
     blockStatements.add(enableWarning)
     blockStatements.add(generateComponentObj(typeName))
     let blockBody = newBlockStmt(blockStatements)
@@ -72,7 +67,7 @@ macro component*(name: untyped, body: untyped): untyped = generateComponent(name
 
 macro page*(name: untyped, body: untyped): untyped = generateComponent(name, true, body)
 
-export runtime, json, router
+export runtime, json, autoRoute
 
 ## TODO Validate:
 ## Render always exists

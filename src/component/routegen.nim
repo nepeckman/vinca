@@ -45,11 +45,9 @@ proc generateRouteProc*(path: Path, renderProc: NimNode): NimNode =
             let `parsedPathParams` = `parsePathCall`
             `call`
 
-proc generateRouteObj*(path: Path, isPage: bool, router: NimNode): NimNode =
+proc generateRouteObj*(path: Path): NimNode =
     let route = getRouteObj()
     let routeFn = getRouteProc()
     let pathNode = newStrLitNode("/" & path.base)
-    let addCall = if isPage: ident("addPage") else: ident("addComponent")
     result = quote do:
         let `route` = newComponentRoute(`pathNode`, `routeFn`)
-        `router`.`addCall`(`route`)

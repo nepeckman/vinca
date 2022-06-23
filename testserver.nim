@@ -27,6 +27,12 @@ page index:
         a(href post.linker("blah")): "Blah Page"
       counter.render(0)
 
-router.index = index.route
+var myRouter {.threadvar.}: Router
+proc getRouter(): Router {.gcsafe.} =
+  if myRouter.isNil:
+    myRouter = newRouter()
+    myRouter.index = index.route
+    autoRoute(myRouter)
+  result = myRouter
 
-serve()
+serve(getRouter)
