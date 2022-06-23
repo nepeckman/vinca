@@ -10,13 +10,11 @@ macro autoRoute*(router: untyped): untyped =
     for comp in componentRoutes:
         let initializer = getInitializerName(comp)
         result.add(quote do:
-            `initializer`())
-        result.add(quote do:
+            `initializer`(`router`)
             `router`.addComponent(`comp`.route))
     for page in pageRoutes:
         let initializer = getInitializerName(page)
         result.add(quote do:
-            `initializer`())
-        result.add(quote do:
+            `initializer`(`router`)
             `router`.addPage(`page`.route))
     

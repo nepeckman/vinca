@@ -17,8 +17,9 @@ proc encodeQueryParams(paramsToEncode: seq[NimNode]): NimNode =
             let `paramStringIdent` = `paramName` & "=" & encodeParam(`paramIdent`)
         )
 
+proc getComponentBasePath*(): NimNode = ident("componentBasePath")
 
-proc generateLinkerProc*(path: Path, basePath: string, renderProc: NimNode): NimNode =
+proc generateLinkerProc*(path: Path, isPage: bool, renderProc: NimNode): NimNode =
     let paramIdents = getParamIdents(renderProc)
     let pathParams = paramIdents.filterIt(path.hasParam(it[0].strVal)).mapIt(it[0])
     let queryParams = paramIdents.filterIt(it[1].strVal notin ["Request", "Response"] and (not path.hasParam(it[0].strVal)))
@@ -27,7 +28,7 @@ proc generateLinkerProc*(path: Path, basePath: string, renderProc: NimNode): Nim
     let encodedQueryParams = queryParams.mapIt(ident(it[0].strVal & "Param"))
     let pathParamString = newCall(ident("buildPathParams"), pathParams)
     let queryString = newCall(ident("buildQueryString"), encodedQueryParams)
-    let base = newStrLitNode(basePath)
+    let base = if isPage: newStrLitNode("") else: getComponentBasePath()
     body.add(quote do: `base` & `pathNode` & `pathParamString` & `queryString`) 
     var procParams = concat(@[ident("string")], paramIdents)
     result = newProc(getLinkerProc(), procParams, body)
