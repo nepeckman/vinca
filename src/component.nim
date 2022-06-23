@@ -25,14 +25,17 @@ proc getComponentType(name, renderProc: NimNode): NimNode =
     linkerTy[0][0] = bindSym("string")
     let typeName = getTypeName(name)
     result = quote do:
-        type `typeName`* = tuple[render: `renderTy`, linker: `linkerTy`, route: Route]
+        type `typeName`* = ref object
+            render: `renderTy`
+            linker: `linkerTy`
+            route: Route
 
-proc generateComponentTuple(): NimNode =
+proc generateComponentObj(typeName: NimNode): NimNode =
     let renderSym = getRenderProc()
     let linkerSym = getLinkerProc()
     let routeSym = getRouteObj()
     result = quote do:
-        (render: `renderSym`, linker: `linkerSym`, route: `routeSym`)
+        `typeName`(render: `renderSym`, linker: `linkerSym`, route: `routeSym`)
 
 proc generateComponent(name: NimNode, isPage: bool, body: NimNode): NimNode =
     result = newStmtList()
@@ -60,7 +63,7 @@ proc generateComponent(name: NimNode, isPage: bool, body: NimNode): NimNode =
     blockStatements.add(generateRouteProc(path, renderProc))
     blockStatements.add(generateRouteObj(path, isPage, router))
     blockStatements.add(enableWarning)
-    blockStatements.add(generateComponentTuple())
+    blockStatements.add(generateComponentObj(typeName))
     let blockBody = newBlockStmt(blockStatements)
     result.add(quote do:
         `name` = `blockBody`)
