@@ -1,4 +1,5 @@
 import src/vinca
+import src/styles/css
 
 component counter:
   render = proc (val: int): VNode =
