@@ -1,5 +1,5 @@
-import src/vinca
-import src/styles/css
+import vinca
+import styles/css
 
 component counter:
   render = proc (val: int): VNode =
@@ -8,7 +8,7 @@ component counter:
         span(): $val
         button(): "Increment"
 
-page post:
+page dynamicpage:
   path = "post/@content"
   render = proc (content: string): VNode =
     result = htmlDsl():
@@ -25,7 +25,7 @@ page index:
     result = htmlDsl():
       vdiv():
         a(href about.linker()): "About"
-        a(href post.linker("blah")): "Blah Page"
+        a(href dynamicpage.linker("blah")): "Blah Page"
       counter.render(0)
 
 var myRouter {.threadvar.}: Router

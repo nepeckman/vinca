@@ -21,9 +21,9 @@ proc generateComponentType(name, renderProc: NimNode): NimNode =
     let typeName = getTypeName(name)
     result = quote do:
         type `typeName`* = ref object
-            render: `renderTy`
-            linker: `linkerTy`
-            route: Route
+            render*: `renderTy`
+            linker*: `linkerTy`
+            route*: Route
 
 proc generateObjDecl(name: NimNode): NimNode = 
     let typeName = getTypeName(name)
